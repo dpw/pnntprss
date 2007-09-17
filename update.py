@@ -51,7 +51,8 @@ def update(g):
         g.reload_config()
         config = g.config
         
-        feed = feedparser.parse(config['href'], **restrict(config, state_keys))
+        feed = feedparser.parse(config['href'], agent=settings.user_agent,
+                                **restrict(config, state_keys))
 
         # for debugging
         g.save("feed", repr(feed))

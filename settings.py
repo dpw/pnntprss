@@ -10,9 +10,12 @@ feed_poll_interval = 1800
 # None means forever
 article_lifetime = None
 
+# user-agent string
+user_agent = "pnntprss/0.01 +http://david.wragg.org/pnntprss/"
+
 import logging
 
-logging.basicConfig(level=logging.INFO,
+logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s %(name)s %(message)s',
                     datefmt='%Y-%m-%d %H:%M:%S',
                     filename=os.path.join(base_dir, "log"))
