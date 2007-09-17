@@ -2,7 +2,9 @@
 
 import sys, os, re, codecs
 
-import group
+import settings, group
+
+logger = settings.get_logger('pnntprss.nntp')
 
 # RFC977: commands with parameters must separate the parameters from
 # each other and from the command by one or more space or tab
@@ -10,7 +12,7 @@ import group
 separator_re = re.compile(r'\s+')
 
 class NNTPServer:
-    def __init__(self, input, output, debug = None):
+    def __init__(self, input, output):
         self.finished = False
         self.current_group = None
         self.current_article_number = None
@@ -19,19 +21,11 @@ class NNTPServer:
         self.input = os.fdopen(input.fileno(), "rU", 0)
         self.output = codecs.getwriter("utf-8")(output)
 
-        self.debug = None
-        if debug is not None:
-            self.debug = codecs.getwriter("ascii")(debug, errors="ignore")
-
     def debug_in(self, l):
-        if self.debug is not None:
-            self.debug.write('< %s\n' % l)
-            self.debug.flush()
+        logger.debug("< " + l)
 
     def debug_out(self, l):
-        if self.debug is not None:
-            self.debug.write('> %s\n' % l)
-            self.debug.flush()
+        logger.debug("> " + l)
 
     def readlines(self):
         # avoid using file as iterator, since it implies buffering
@@ -44,7 +38,7 @@ class NNTPServer:
             if l[-1] == '\n':
                 l = l[0:-1]
 
-            self.debug_in(l)
+            logger.debug("< " + l)
             yield l
 
     def writeline(self, l):

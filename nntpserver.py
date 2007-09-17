@@ -16,6 +16,6 @@ while True:
     if pid > 0:
         conn.close()
     else:
-        nntp.NNTPServer(input=conn.makefile('r'), output=conn.makefile('w'), debug=sys.stdout).process_commands()
+        nntp.NNTPServer(input=conn.makefile('r'), output=conn.makefile('w')).process_commands()
         conn.close()
         sys.exit(0)
