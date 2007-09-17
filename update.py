@@ -115,7 +115,7 @@ def update(g):
 
             # XXX need to catch exceptions so we always save next art number
             g.save("index", repr(index))
-    except BaseException, ex:
+    except Exception, ex:
         logger.warning("%s: %s" % (g.name, ex))
     finally:
         g.save_config()
