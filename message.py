@@ -1,3 +1,5 @@
+# NNTP message encoding trivia
+
 from email.Header import Header
 from email.Charset import Charset
 from StringIO import StringIO
@@ -33,6 +35,10 @@ def base64encode(s):
     return buf.getvalue()
     
 class Message:
+    """An object repesenting NNTP message data.
+
+    Acts as a mutable mapping containing the message headers."""
+    
     def __init__(self):
         self.headers = {}
         self.body = ''
@@ -59,6 +65,7 @@ class Message:
         del self.headers[name]
 
     def set_body(self, value, content_type):
+        """The the body of the message."""
         encode = True
         if type(value) is unicode:
             # see if it is plain ascii first
@@ -87,6 +94,7 @@ class Message:
             self.body = value
 
     def header_bytes(self):
+        """Return the bytes for the message headers to be passed over NNTP."""
         res = ''
         for (h, v) in self.headers.items():
             res += h + ': ' + v + '\r\n'
@@ -94,6 +102,9 @@ class Message:
         return res
 
     def dot_stuffed_body(self):
+        """Return the bytes for the dot-stuffed message body, to be
+        passed over NNTP."""
+
         # take the body, normalize line endings, and dot-stuff
         body = line_end_re.sub('\r\n', self.body)
         if not body.endswith('\r\n'):

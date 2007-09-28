@@ -1,4 +1,7 @@
 #!/usr/bin/python
+#
+# A trivial NNTP server process.  Hands off to NNTPServer to process
+# the connections.
 
 import socket, sys, os, signal
 

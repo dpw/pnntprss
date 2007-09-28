@@ -1,9 +1,13 @@
+# Unix lockfiles
+
 import os, os.path, warnings
 
 # we use tempnam safely.
 warnings.filterwarnings('ignore', 'tempnam', RuntimeWarning, 'lockfile')
 
 class LockFile:
+    """An object representing a Unix lockfile."""
+    
     def __init__(self, path):
         self.locked = False
         self.path = path
@@ -15,6 +19,8 @@ class LockFile:
             self.prefix = '.' + self.prefix
 
     def trylock(self):
+        """Try to acquire the lock."""
+        
         if self.locked:
             raise "already holding lock"
         
@@ -43,8 +49,18 @@ class LockFile:
         return self.locked
 
     def unlock(self):
+        """Release the lock."""
         if not self.locked:
             raise "not locked"
 
         self.locked = False
         os.unlink(self.path)
+
+if __name__ == '__main__':
+    l1 = LockFile('/tmp/xxx')
+    l2 = LockFile('/tmp/xxx')
+    print l1.trylock()
+    print l2.trylock()
+    l1.unlock()
+    print l2.trylock()
+    l2.unlock()

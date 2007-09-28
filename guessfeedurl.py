@@ -1,3 +1,5 @@
+# Feed URL autodetection
+
 import urllib2, urlparse
 from HTMLParser import HTMLParser
 
@@ -28,6 +30,11 @@ class LinkParser(HTMLParser):
             HTMLParser.handle_starttag(self, tag, attrs)
 
 def guess_feed_url(url):
+    """Given a URL, find the corresponding feed URL.
+
+    The URL specified may itself be a feed URL, or the URL of an HTML
+    page which indicates its corresponding feed URL."""
+    
     usock = urllib2.urlopen(url)
     content = usock.read()
     usock.close()

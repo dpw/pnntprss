@@ -1,4 +1,15 @@
 #!/usr/bin/python
+#
+# Polls feeds.
+#
+# This is intended to be run frequently from a cron job (once every
+# few minutes).  It obeys the poll interval set for each feed, so
+# running it too frequently will not change how often we contact a
+# feed server.
+#
+# When run with no arguments, polls all feeds that should be checked.
+# Otherwise, polls the feeds specfiied by the group names given as
+# arguments.
 
 import sys, time, md5, types, os
 import feedparser
@@ -154,4 +165,4 @@ if len(sys.argv) > 1:
 else:
     now = time.time()
     run_tasks(((sys.argv[0], g.name) for g in group.groups()
-               if g.ready_to_check(now)), 4)
+               if g.ready_to_check(now)), settings.feed_poll_concurrency)

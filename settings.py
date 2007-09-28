@@ -1,6 +1,11 @@
+# pnntprss global settings
+
 import os, os.path
 
+# The base directory of pnntprss data
 base_dir = os.path.join(os.environ['HOME'], ".pnntprss")
+
+# The directory containing group data
 groups_dir = os.path.join(base_dir, "groups")
 
 # default feed polling interval
@@ -13,6 +18,10 @@ article_lifetime = None
 # user-agent string
 user_agent = "pnntprss/0.01 +http://david.wragg.org/pnntprss/"
 
+# how many feeds to retrieve concurrently when polling all feeds
+feed_poll_concurrency = 4
+
+# Logging settings
 import logging
 
 logging.basicConfig(level=logging.DEBUG,

@@ -1,5 +1,8 @@
 #!/usr/bin/python
 
+# Go through all the groups, expiring articles that have exceeded
+# their lifetime.
+
 import os, time
 
 import settings, group
@@ -7,6 +10,8 @@ import settings, group
 logger = settings.get_logger('pnntprss.expire')
 
 def expire(g):
+    """Expire articles in the given group."""
+    
     if not g.lockfile.trylock():
         # we are already updating, expiring, or otherwise messing with
         # this group.  No problem, we'll try again next time round.

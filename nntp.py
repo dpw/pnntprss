@@ -1,4 +1,6 @@
 #!/usr/bin/python
+#
+# NNTP protocol handling
 
 import sys, os, re, codecs
 
@@ -12,6 +14,8 @@ logger = settings.get_logger('pnntprss.nntp')
 separator_re = re.compile(r'\s+')
 
 class NNTPServer:
+    """An object representing the server side of an NNTP connection."""
+    
     def __init__(self, input, output):
         self.finished = False
         self.current_group = None
@@ -28,6 +32,7 @@ class NNTPServer:
         logger.debug("> " + l)
 
     def readlines(self):
+        """A generator yielding the lines sent by the NNTP client."""
         # avoid using file as iterator, since it implies buffering
         while True:
             l = self.input.readline()
@@ -42,12 +47,14 @@ class NNTPServer:
             yield l
 
     def writeline(self, l):
+        """Write a line to the NNTP client."""
         self.debug_out(l)
         self.output.write(l)
         self.output.write('\r\n')
         self.output.flush()
 
     def write(self, data):
+        """Write some data to the NNTP client."""
         lines = data.split("\r\n")
         for l in lines[:-1]:
             self.debug_out(l)
@@ -59,6 +66,8 @@ class NNTPServer:
         self.output.flush()
 
     def process_commands(self):
+        """Process NNTP commands comming from the client, until it
+        terminates the connection."""
         self.writeline('201 server ready - no posting allowed')
         
         for l in self.readlines():
@@ -74,6 +83,8 @@ class NNTPServer:
 
             if self.finished:
                 break
+
+    # each do_* method handles the corresponding NNTP command.
 
     def do_MODE(self, params):
         if params and params[0].upper() == 'READER':

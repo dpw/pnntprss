@@ -1,4 +1,8 @@
 #!/usr/bin/python
+#
+# Create a new group, subscribing to its feed.
+#
+# This functionality should be rolled into admin.py
 
 import sys, os, os.path
 
