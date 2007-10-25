@@ -166,6 +166,18 @@ if len(sys.argv) > 1:
     for arg in sys.argv[1:]:
         update(group.Group(arg))
 else:
-    now = time.time()
-    run_tasks(((sys.argv[0], g.name) for g in group.groups()
-               if g.ready_to_check(now)), settings.feed_poll_concurrency)
+    lock = lockfile.LockFile(os.path.join(settings.groups_dir, "update.lock"))
+    if lock.trylock():
+        try:
+            def touching(l, it):
+                for x in it:
+                    yield x
+                    l.touch()
+            
+            now = time.time()
+            run_tasks(touching(lock,((sys.argv[0], g.name)
+                                     for g in group.groups()
+                                     if g.ready_to_check(now))),
+                      settings.feed_poll_concurrency)
+        finally:
+            lock.unlock()
