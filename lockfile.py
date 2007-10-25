@@ -1,6 +1,10 @@
 # Unix lockfiles
 
-import os, os.path, warnings
+import os, os.path, time, warnings
+
+import settings
+
+logger = settings.get_logger('pnntprss.lockfile')
 
 # we use tempnam safely.
 warnings.filterwarnings('ignore', 'tempnam', RuntimeWarning, 'lockfile')
@@ -8,9 +12,10 @@ warnings.filterwarnings('ignore', 'tempnam', RuntimeWarning, 'lockfile')
 class LockFile:
     """An object representing a Unix lockfile."""
     
-    def __init__(self, path):
+    def __init__(self, path, expiry_time=30):
         self.locked = False
         self.path = path
+        self.expiry_time = expiry_time
         (self.dir, self.prefix) = os.path.split(path)
         if not os.path.isdir(self.dir):
             raise "invalid directory for lock file: %s" % path
@@ -23,6 +28,18 @@ class LockFile:
         
         if self.locked:
             raise "already holding lock"
+
+        if os.path.exists(self.path):
+            try:
+                st = os.stat(self.path)
+                if time.time() - st.st_mtime < self.expiry_time:
+                    # lock exists, and isn't stale, so we don't acquire it
+                    return False
+
+                logger.info("removing stale lock file %s" % self.path)
+                os.remove(self.path)
+            except:
+                pass
         
         while True:
             tmpfile = os.tempnam(self.dir, self.prefix)
@@ -47,6 +64,14 @@ class LockFile:
                 pass
         
         return self.locked
+
+    def touch(self):
+        """Touch the lock file, to avoid it becoming stale during an
+        extended operation."""
+        if not self.locked:
+            raise "not locked"
+        
+        os.utime(self.path, None)
 
     def unlock(self):
         """Release the lock."""
