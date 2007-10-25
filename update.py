@@ -11,10 +11,13 @@
 # Otherwise, polls the feeds specfiied by the group names given as
 # arguments.
 
-import sys, time, md5, types, os
+import sys, time, md5, types, os, socket
 import feedparser
 
 import settings, lockfile, group
+
+# use a socket timeout of 20 seconds
+socket.setdefaulttimeout(20)
 
 logger = settings.get_logger('pnntprss.update')
 
