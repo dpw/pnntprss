@@ -12,7 +12,7 @@ warnings.filterwarnings('ignore', 'tempnam', RuntimeWarning, 'lockfile')
 class LockFile:
     """An object representing a Unix lockfile."""
     
-    def __init__(self, path, expiry_time=30):
+    def __init__(self, path, expiry_time=30 * 60):
         self.locked = False
         self.path = path
         self.expiry_time = expiry_time
