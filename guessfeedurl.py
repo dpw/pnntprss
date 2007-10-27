@@ -5,6 +5,8 @@ from HTMLParser import HTMLParser
 
 import feedparser
 
+import settings
+
 # prefer atom links
 type_goodness = {'application/rss+xml':1, 'application/atom+xml':2}
 
@@ -35,7 +37,9 @@ def guess_feed_url(url):
     The URL specified may itself be a feed URL, or the URL of an HTML
     page which indicates its corresponding feed URL."""
     
-    usock = urllib2.urlopen(url)
+    req = urllib2.Request(url)
+    req.add_header('User-Agent', settings.user_agent)
+    usock = urllib2.urlopen(req)
     content = usock.read()
     usock.close()
 
