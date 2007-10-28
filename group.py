@@ -180,7 +180,8 @@ class Group:
 def groups():
     """Return a sequence of all available groups."""
     return [Group(d) for d in os.listdir(settings.groups_dir)
-            if os.path.isdir(group_path(d))]
+            if not d.startswith(newgroup_prefix)
+            and os.path.isdir(group_path(d))]
 
 def encode_email_header(name, email="unknown@unknown"):
     """Produce a properly encoded string with the given name and email
