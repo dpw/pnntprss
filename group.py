@@ -1,8 +1,11 @@
 # Classes representing groups and articles.
 
-import os, os.path, time
+import os, os.path, time, warnings
 
 import settings, message, lockfile
+
+# we use tempnam safely.
+warnings.filterwarnings('ignore', 'tempnam', RuntimeWarning, 'group')
 
 class OpenRange:
     """An OpenRange object contains everything."""
@@ -34,12 +37,32 @@ def saferemove(path):
         pass
 
 class NoSuchGroupError(Exception):
-    """An Exception that indicates that the specified group did not exist."""
+    """An Exception indicating that the specified group did not exist."""
+    pass
+
+class GroupAlreadyExistsError(Exception):
+    """An Exception indicating the a group with the specified name already exists"""
     pass
 
 def group_path(group_name):
     """The path name for the directory of the named group."""
     return "%s/%s" % (settings.groups_dir, group_name)
+
+newgroup_prefix = ".new."
+
+def create_group(name, config):
+    """Create a new group with the given name and config"""
+    groupdir = os.path.join(settings.groups_dir, name)
+    if os.path.exists(groupdir):
+        raise GroupAlreadyExistsError, name
+    
+    tmpdir = os.tempnam(settings.groups_dir, newgroup_prefix)
+    os.mkdir(tmpdir)
+    f = file(os.path.join(tmpdir, "config"), "w")
+    f.write(repr(config))
+    f.close()
+    
+    os.rename(tmpdir, groupdir)
 
 class Group:
     """A NNTP group, and its associated feed information."""

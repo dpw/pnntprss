@@ -3,8 +3,9 @@
 # An administration tool for pnntprss.  Currently can only display
 # group data.
 
-import sys, time
-import group
+import sys, time, optparse
+
+import group, guessfeedurl
 
 def english_interval(val):
     """Convert an interval expressed as a number of seconds to a
@@ -38,5 +39,28 @@ def display_group(g):
 
             print prop[1] + ':', func(config[prop[0]])
 
-for arg in sys.argv[1:]:
-    display_group(group.Group(arg))
+
+parser = optparse.OptionParser()
+parser.add_option('-a', '--add-group', action='store_true')
+parser.add_option('-u', '--uri') 
+(opts, args) = parser.parse_args()
+
+def error(msg):
+    print >>sys.stderr, msg
+    sys.exit(1)
+
+if opts.add_group:
+    if len(args) != 1:
+        error("There should be exactly one group name")
+    if opts.uri is None:
+        error("Feed URI not specified")
+
+    print >>sys.stderr, "Checking feed..."
+    uri = guessfeedurl.guess_feed_url(opts.uri)
+    if uri is None:
+        error("Could not find a valid feed at %s" % opts.uri)
+
+    group.create_group(args[0], {"href": uri})
+else:
+    for arg in args:
+        display_group(group.Group(arg))
