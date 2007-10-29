@@ -61,6 +61,9 @@ if opts.add_group:
         error("Could not find a valid feed at %s" % opts.uri)
 
     group.create_group(args[0], {"href": uri})
+elif len(args) == 0:
+    for g in group.groups():
+        print g.name
 else:
     for arg in args:
         display_group(group.Group(arg))
