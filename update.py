@@ -172,7 +172,8 @@ else:
             def touching(l, it):
                 for x in it:
                     yield x
-                    l.touch()
+                    if not l.touch():
+                        return
             
             now = time.time()
             run_tasks(touching(lock,((sys.argv[0], g.name)

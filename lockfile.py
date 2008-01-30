@@ -46,40 +46,48 @@ class LockFile:
             if not os.path.exists(tmpfile):
                 break
 
-        try:
-            f = file(tmpfile, "w")
-            f.close()
+        f = file(tmpfile, "w")
+        f.close()
 
-            try:
-                os.link(tmpfile, self.path)
-            except:
-                pass
+        try:
+            os.link(tmpfile, self.path)
+        except:
+            pass
             
-            st = os.stat(tmpfile)
-            self.locked = (st.st_nlink > 1)
-        finally:
-            try:
-                os.unlink(tmpfile)
-            except:
-                pass
+        st = os.stat(tmpfile)
+        if st.st_nlink > 1:
+            self.locked = tmpfile
         
-        return self.locked
+        return self.locked is not False
 
     def touch(self):
         """Touch the lock file, to avoid it becoming stale during an
         extended operation."""
         if not self.locked:
             raise "not locked"
-        
-        os.utime(self.path, None)
 
+        st = os.stat(self.locked)
+        if st.st_nlink == 1:
+            # someone snatched our lock
+            return False
+
+        os.utime(self.locked, None)
+        return True
+    
     def unlock(self):
         """Release the lock."""
         if not self.locked:
             raise "not locked"
 
-        self.locked = False
-        os.unlink(self.path)
+        try:
+            st = os.stat(self.locked)
+            os.unlink(self.locked)
+            if st.st_nlink == 1:
+                logger.info("lock file %s was snatched" % self.path)
+            else:
+                os.unlink(self.path)
+        finally:
+            self.locked = False
 
 if __name__ == '__main__':
     l1 = LockFile('/tmp/xxx')
