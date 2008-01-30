@@ -5,28 +5,14 @@
 
 import sys, time, optparse
 
-import group, guessfeedurl
-
-def english_interval(val):
-    """Convert an interval expressed as a number of seconds to a
-    human-readable string."""
-    val = int(val)
-    str = ''
-    for (noun, div) in (('second', 60), ('minute', 60), ('hour', 24),
-                        ('day', 365), ('year', 1000)):
-        r = val % div
-        val = val / div
-        if r:
-            str = '%d %s%s%s%s' % (r, noun, r > 1 and 's' or '',
-                                   str and ', ' or '', str)
-    return str
+import group, guessfeedurl, english
 
 props = [('href', 'Feed URI'),
-         ('link', 'Feed page URI'),
-         ('interval', 'Poll interval', english_interval),
+         ('link', 'Feed homepage URI'),
+         ('interval', 'Poll interval', english.describe_interval),
          ('lastpolled', 'Last successful poll time',
           lambda s: time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(s))),
-         ('article_lifetime', 'Article lifetime', english_interval)]
+         ('article_lifetime', 'Article lifetime', english.describe_interval)]
 
 def display_group(g):
     """Print the properties of the given group in a readable form."""
