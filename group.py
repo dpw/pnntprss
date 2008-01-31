@@ -64,6 +64,13 @@ def create_group(name, config):
     
     os.rename(tmpdir, groupdir)
 
+def load_group(name):
+    """Load a group with the given name"""
+    if not os.path.isdir(group_path(name)):
+        raise "no group " + name
+
+    return Group(name)
+
 class Group:
     """A NNTP group, and its associated feed information."""
     
