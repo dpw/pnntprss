@@ -264,8 +264,9 @@ class Article:
         res = to_html(self.content())
         if 'link' in self.entry:
             link = self.entry['link']
-            caption = self.entry.get('title_detail') or {'value':link,
-                                                         'type':'text/plain'}
+            caption = self.entry.get('title_detail')
+            if not (caption and caption['value']):
+                caption = {'value':link, 'type':'text/plain'}
             res = "<h1><a href='%s'>%s</a></h1>\n%s" % (link, to_html(caption),
                                                         res)
 
