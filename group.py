@@ -1,6 +1,6 @@
 # Classes representing groups and articles.
 
-import os, os.path, time, warnings
+import os, os.path, time, warnings, cgi
 
 import settings, message, lockfile
 
@@ -196,12 +196,15 @@ def encode_email_header(name, email="unknown@unknown"):
     return '%s <%s>' % (message.encode_header_word(name),
                         message.encode_header_word(email))
 
-def to_html(detail):
+def to_html(detail, para=False):
     """Convert a detail-dict produced by the UFP into HTML."""
     type = detail['type']
     if type == 'text/plain':
-        # XXX escape, wrap in <p>
-        return detail['value']
+        html = cgi.escape(detail['value'])
+        if para:
+            return '<p>%s</p>' % html
+        else:
+            return html
     else:
         # maybe do something smarter for application/xhtml+xml?
         return detail['value']
@@ -261,7 +264,7 @@ class Article:
                 return c
 
         # result is going to be HTML
-        res = to_html(self.content())
+        res = to_html(self.content(), para=True)
         if 'link' in self.entry:
             link = self.entry['link']
             caption = self.entry.get('title_detail')
