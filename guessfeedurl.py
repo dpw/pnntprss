@@ -19,17 +19,18 @@ class LinkParser(HTMLParser):
 
     def handle_starttag(self, tag, attrs):
         if not self.inbody and tag == 'link':
-            attrs = dict(attrs)
-            if attrs.get('rel') == 'alternate' and 'href' in attrs:
-                goodness = type_goodness[attrs.get('type')]
+            a = dict(attrs)
+            if a.get('rel') == 'alternate' and 'href' in a:
+                goodness = type_goodness.get(a.get('type'), 0)
                 if goodness > self.goodness:
                     self.goodness = goodness
-                    self.href = attrs['href']
+                    self.href = a['href']
         else:
             if tag == 'body':
                 self.inbody = True
+        
+        HTMLParser.handle_starttag(self, tag, attrs)
 
-            HTMLParser.handle_starttag(self, tag, attrs)
 
 def guess_feed_url(url):
     """Given a URL, find the corresponding feed URL.
