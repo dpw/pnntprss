@@ -11,7 +11,7 @@
 # Otherwise, polls the feeds specfiied by the group names given as
 # arguments.
 
-import sys, time, md5, types, os, socket
+import sys, time, md5, types, os, socket, traceback
 import feedparser
 
 import settings, lockfile, group
@@ -71,8 +71,13 @@ def update(g):
         # for debugging
         g.save("feed", repr(feed))
 
-        if feed.bozo and not feed.get('status'):
-            raise feed.bozo_exception
+        if feed.bozo:
+            if feed.get('status'):
+                # we have a feed, but it's bozotic
+                logger.warning("%s: bozo: %s" % (g.name, feed.bozo_exception))
+            else:
+                # no feed, give up
+                raise feed.bozo_exception
     
         config["lastpolled"] = now
         config.update(restrict(feed, state_keys))
@@ -131,7 +136,7 @@ def update(g):
             # XXX need to catch exceptions so we always save next art number
             g.save("index", repr(index))
     except Exception, ex:
-        logger.warning("%s: %s" % (g.name, ex))
+        logger.warning("%s: %s" % (g.name, traceback.format_exc()))
     finally:
         g.save_config()
         g.lockfile.unlock()
