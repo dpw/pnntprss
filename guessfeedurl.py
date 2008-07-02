@@ -53,13 +53,14 @@ def guess_feed_url(url):
         pass
 
     # assume HTML, and do feed autodection
+    parser = LinkParser()
     try:
-        parser = LinkParser()
         parser.feed(content)
-        if parser.href:
-            return urlparse.urljoin(url, parser.href)
     except:
         pass
+
+    if parser.href:
+        return urlparse.urljoin(url, parser.href)
 
     return None
 
