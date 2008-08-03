@@ -154,8 +154,12 @@ class Group:
     def article(self, num):
         """Fetch an Article object for the given article number.
 
-        The specified article must exist."""
-        return Article(self, num, self.load_eval(num))
+        Returns None if the article does not exist."""
+        entry = self.load_eval(num)
+        if entry is not None:
+            return Article(self, num, entry)
+        else:
+            return None
 
     def article_numbers(self, range=OpenRange()):
         """Generate the article numbers of articles in the group,
