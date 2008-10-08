@@ -45,14 +45,14 @@ class GroupAlreadyExistsError(Exception):
     pass
 
 def group_path(group_name):
-    """The path name for the directory of the named group."""
+    """The proper path name for the directory of the named group."""
     return "%s/%s" % (settings.groups_dir, group_name)
 
 newgroup_prefix = ".new."
 
 def create_group(name, config):
     """Create a new group with the given name and config"""
-    groupdir = os.path.join(settings.groups_dir, name)
+    groupdir = group_path(name)
     if os.path.exists(groupdir):
         raise GroupAlreadyExistsError, name
     
@@ -64,27 +64,18 @@ def create_group(name, config):
     
     os.rename(tmpdir, groupdir)
 
-def load_group(name):
-    """Load a group with the given name"""
-    if not os.path.isdir(group_path(name)):
-        raise "no group " + name
-
-    return Group(name)
-
 class Group:
     """A NNTP group, and its associated feed information."""
     
     def __init__(self, name):
+        """Load the group with the given name."""
         self.name = name
-        if not os.path.isdir(self.group_path()):
+        self.path = group_path(name)
+        if not os.path.isdir(self.path):
             raise NoSuchGroupError, name
 
         self.config = self.load_eval("config", {})
         self.lockfile = lockfile.LockFile(self.group_file("lock"))
-
-    def group_path(self):
-        """Return the path name for the group's directory."""
-        return group_path(self.name)
 
     def group_file(self, fname):
         """Return the path name for the given file in the group's
@@ -140,7 +131,7 @@ class Group:
         highest = lowest - 1
         count = 0
 
-        for f in os.listdir(self.group_path()):
+        for f in os.listdir(self.path):
             if isdigit(f[0]):
                 f = int(f)
                 count += 1
@@ -164,7 +155,7 @@ class Group:
     def article_numbers(self, range=OpenRange()):
         """Generate the article numbers of articles in the group,
         within the given range."""
-        for f in os.listdir(self.group_path()):
+        for f in os.listdir(self.path):
             if isdigit(f[0]):
                 f = int(f)
                 if f in range:

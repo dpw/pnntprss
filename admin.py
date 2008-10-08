@@ -54,7 +54,7 @@ if opts.add_group:
     group.create_group(args[0], config)
 elif config:
     for arg in args:
-        g = group.load_group(arg)
+        g = group.Group(arg)
         g.config.update(config)
         g.save_config()
 elif len(args) == 0:
@@ -64,4 +64,4 @@ elif len(args) == 0:
 else:
     # display specified groups
     for arg in args:
-        display_group(group.load_group(arg))
+        display_group(group.Group(arg))
