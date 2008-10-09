@@ -24,7 +24,7 @@ def expire(g):
             to_remove = set()
             
             for art in g.article_numbers():
-                stat = os.stat(g.group_file(art))
+                stat = os.stat(g.article_file(art))
                 if now - stat.st_mtime > lifetime:
                     to_remove.add(art)
 
@@ -45,7 +45,7 @@ def expire(g):
                 g.save("index", repr(index))
                 
                 for art in to_remove:
-                    g.saferemove(art)
+                    g.delete_article(art)
     finally:
         g.lockfile.unlock()
 

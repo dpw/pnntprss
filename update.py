@@ -136,7 +136,7 @@ def update_group_from_feed(g, feed):
     
                 logger.info("%s article %s@%s (%s)"
                             % (action, id, g.name, num))
-                g.save(str(num), repr(entry))
+                g.save_article(num, entry)
 
             # XXX need to catch exceptions so we always save next art number
             g.save("index", repr(index))

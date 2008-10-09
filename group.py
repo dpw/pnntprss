@@ -143,6 +143,15 @@ class Group:
         else:
             return None
 
+    def save_article(self, artnum, entry):
+        self.save(str(artnum), repr(entry))
+
+    def delete_article(self, artnum):
+        self.saferemove(str(artnum))
+    
+    def article_file(self, artnum):
+        return self.group_file(str(artnum))
+    
     def article_numbers(self, range=OpenRange()):
         """Generate the article numbers of articles in the group,
         within the given range."""
