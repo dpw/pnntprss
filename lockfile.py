@@ -60,6 +60,10 @@ class LockFile:
         
         return self.locked is not False
 
+    def lock(self):
+        while not self.trylock():
+            time.sleep(5)
+
     def touch(self):
         """Touch the lock file, to avoid it becoming stale during an
         extended operation."""

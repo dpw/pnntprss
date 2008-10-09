@@ -5,7 +5,7 @@
 
 import sys, time, optparse
 
-import group, guessfeedurl, english
+import group, guessfeedurl, english, update
 
 props = [('href', 'Feed URI'),
          ('link', 'Feed homepage URI'),
@@ -51,7 +51,16 @@ if opts.add_group:
         error("There should be exactly one group name")
     if opts.uri is None:
         error("Feed URI not specified")
-    group.create_group(args[0], config)
+
+    g = group.NewGroup(args[0], config)
+    failed = True
+    try:
+        update.update(g)
+        failed = False
+        g.create()
+    finally:
+        if failed:
+            g.delete()
 elif config:
     for arg in args:
         g = group.Group(arg)

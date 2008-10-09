@@ -131,12 +131,10 @@ def update(g):
     
                 logger.info("%s article %s@%s (%s)"
                             % (action, id, g.name, num))
-                g.save(num, repr(entry))
+                g.save(str(num), repr(entry))
 
             # XXX need to catch exceptions so we always save next art number
             g.save("index", repr(index))
-    except Exception, ex:
-        logger.warning("%s: %s" % (g.name, traceback.format_exc()))
     finally:
         g.save_config()
         g.lockfile.unlock()
@@ -167,23 +165,27 @@ def run_tasks(tasks, concurrency):
     while pids:
         reap_one()
 
-if len(sys.argv) > 1:
-    for arg in sys.argv[1:]:
-        update(group.Group(arg))
-else:
-    lock = lockfile.LockFile(os.path.join(settings.groups_dir, "update.lock"))
-    if lock.trylock():
-        try:
-            def touching(l, it):
-                for x in it:
-                    yield x
-                    if not l.touch():
-                        return
+if __name__ == "__main__":
+    if len(sys.argv) > 1:
+        for arg in sys.argv[1:]:
+            try:
+                update(group.Group(arg))
+            except:
+                logger.warning("%s: %s" % (arg, traceback.format_exc()))
+    else:
+        lock = lockfile.LockFile(os.path.join(settings.groups_dir, "update.lock"))
+        if lock.trylock():
+            try:
+                def touching(l, it):
+                    for x in it:
+                        yield x
+                        if not l.touch():
+                            return
             
-            now = time.time()
-            run_tasks(touching(lock,((sys.argv[0], g.name)
-                                     for g in group.groups()
-                                     if g.ready_to_check(now))),
-                      settings.feed_poll_concurrency)
-        finally:
-            lock.unlock()
+                now = time.time()
+                run_tasks(touching(lock,((sys.argv[0], g.name)
+                                         for g in group.groups()
+                                         if g.ready_to_check(now))),
+                          settings.feed_poll_concurrency)
+            finally:
+                lock.unlock()

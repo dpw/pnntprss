@@ -48,39 +48,30 @@ def group_path(group_name):
     """The proper path name for the directory of the named group."""
     return "%s/%s" % (settings.groups_dir, group_name)
 
-newgroup_prefix = ".new."
-
-def create_group(name, config):
-    """Create a new group with the given name and config"""
-    groupdir = group_path(name)
-    if os.path.exists(groupdir):
-        raise GroupAlreadyExistsError, name
-    
-    tmpdir = os.tempnam(settings.groups_dir, newgroup_prefix)
-    os.mkdir(tmpdir)
-    f = file(os.path.join(tmpdir, "config"), "w")
-    f.write(repr(config))
-    f.close()
-    
-    os.rename(tmpdir, groupdir)
-
 class Group:
     """A NNTP group, and its associated feed information."""
     
-    def __init__(self, name):
+    def __init__(self, name, path=None, config=None):
         """Load the group with the given name."""
-        self.name = name
-        self.path = group_path(name)
-        if not os.path.isdir(self.path):
+        if path is None:
+            path = group_path(name)
+
+        if not os.path.isdir(path):
             raise NoSuchGroupError, name
 
-        self.config = self.load_eval("config", {})
+        self.name = name
+        self.path = path
+
+        if config is None:
+            config = self.load_eval("config", {})
+
+        self.config = config
         self.lockfile = lockfile.LockFile(self.group_file("lock"))
 
     def group_file(self, fname):
         """Return the path name for the given file in the group's
         directory."""
-        return "%s/%s/%s" % (settings.groups_dir, self.name, fname)
+        return os.path.join(self.path, fname)
 
     def load_eval(self, fname, otherwise=None):
         """Load and evaluate a file from the group's directory."""
@@ -146,7 +137,7 @@ class Group:
         """Fetch an Article object for the given article number.
 
         Returns None if the article does not exist."""
-        entry = self.load_eval(num)
+        entry = self.load_eval(str(num))
         if entry is not None:
             return Article(self, num, entry)
         else:
@@ -179,10 +170,48 @@ class Group:
         self.config['next_article_number'] = num + 1
         return num
 
+class NewGroup(Group):
+    """A NNTP group in the process of creation."""
+
+    prefix = ".new."
+
+    def __init__(self, name, config):
+        """Create a new group with the given name and config"""
+        path = os.tempnam(settings.groups_dir, self.prefix)
+        os.mkdir(path)
+        Group.__init__(self, name, path, config)
+        self.save_config()
+
+    def create(self):
+        lock = lockfile.LockFile(os.path.join(settings.groups_dir,
+                                              ".rename." + self.name))
+        try:
+            lock.lock()
+            path = group_path(self.name)
+            if os.path.exists(path):
+                raise GroupAlreadyExistsError, name
+    
+            os.rename(self.path, path)
+            self.path = path
+        finally:
+            lock.unlock()
+    
+    def delete(self):
+        remove_r(self.path)
+        
+def remove_r(d):
+    for f in os.listdir(d):
+        f = os.path.join(d, f)
+        if os.path.isdir(f):
+            remove_r(f)
+        else:
+            os.remove(f)
+    os.rmdir(d)
+
 def groups():
     """Return a sequence of all available groups."""
     return [Group(d) for d in os.listdir(settings.groups_dir)
-            if not d.startswith(newgroup_prefix)
+            if not d.startswith(NewGroup.prefix)
             and os.path.isdir(group_path(d))]
 
 def encode_email_header(name, email="unknown@unknown"):
