@@ -48,9 +48,8 @@ def stable_repr(val):
     else:
         return repr(val)
 
-def update(g):
-    now = time.time()
-    if not g.ready_to_check(now):
+def update_if_ready(g):
+    if not g.ready_to_check(time.time()):
         return
 
     if not g.lockfile.trylock():
@@ -63,11 +62,15 @@ def update(g):
 
         # group info could have changed by the time we locked
         g.reload_config()
-        config = g.config
-        
-        feed = feedparser.parse(config['href'], agent=settings.user_agent,
-                                **restrict(config, state_keys))
 
+        update_group_from_feed(g, feedparser.parse(g.config['href'],
+                                              agent=settings.user_agent,
+                                              **restrict(g.config, state_keys)))
+    finally:
+        g.lockfile.unlock()
+
+def update_group_from_feed(g, feed):
+    try:
         # for debugging
         g.save("feed", repr(feed))
 
@@ -79,6 +82,8 @@ def update(g):
                 # no feed, give up
                 raise feed.bozo_exception
     
+        now = time.time()
+        config = g.config
         config["lastpolled"] = now
         config.update(restrict(feed, state_keys))
         config.update(restrict(feed['feed'], feed_info_keys))
@@ -137,7 +142,6 @@ def update(g):
             g.save("index", repr(index))
     finally:
         g.save_config()
-        g.lockfile.unlock()
 
 
 def run_tasks(tasks, concurrency):
@@ -169,7 +173,7 @@ if __name__ == "__main__":
     if len(sys.argv) > 1:
         for arg in sys.argv[1:]:
             try:
-                update(group.Group(arg))
+                update_if_ready(group.Group(arg))
             except:
                 logger.warning("%s: %s" % (arg, traceback.format_exc()))
     else:
