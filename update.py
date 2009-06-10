@@ -32,10 +32,9 @@ def restrict(d, keys):
 
     return res
 
-state_keys = [ 'etag', 'modified' ]
-feed_info_keys = [ 'title', 'title_detail', 'link', 'links',
-                   'subtitle', 'subtitle_detail', 'rights', 'rights_detail',
-                   'id', 'author', 'author_detail' ]
+state_keys = ['etag', 'modified']
+feed_info_keys = 'title title_detail link links subtitle subtitle_detail rights rights_detail id author author_detail'.split(' ')
+entry_struct_time_keys = [x+'_parsed' for x in 'published updated created expired'.split(' ')]
 
 def stable_repr(val):
     t = type(val)
@@ -86,12 +85,23 @@ def update_group_from_feed(g, feed):
         now = time.time()
         config = g.config
         config["lastpolled"] = now
-        config.update(restrict(feed, state_keys))
-        config.update(restrict(feed['feed'], feed_info_keys))
 
+        state = restrict(feed, state_keys)
+        if 'modified' in state:
+            # coerce struct_time to a tuple
+            state['modified'] = tuple(state['modified'])
+
+        config.update(state)
+        config.update(restrict(feed['feed'], feed_info_keys))
+        
         if feed.status == 301:
             # permanent redirect.  update config
             config['href'] = feed.href
+
+        feed_updated_parsed = feed.feed.get('updated_parsed')
+        if feed_updated_parsed:
+            # coerce struct_time to a tuple
+            feed_updated_parsed = tuple(feed_updated_parsed)
 
         if 'entries' in feed and len(feed['entries']):
             index = g.load_eval("index", {})
@@ -105,6 +115,11 @@ def update_group_from_feed(g, feed):
                 # convert entry to true dict
                 entry = dict(entry.iteritems())
             
+                # coerce struct_time fields to tuples
+                for k in entry_struct_time_keys:
+                    if k in entry:
+                        entry[k] = tuple(entry[k])
+                
                 # some RSS feeds have ids, but they are empty!
                 id = entry.get('id')
                 if id:
@@ -127,14 +142,14 @@ def update_group_from_feed(g, feed):
 
                 # some feeds lack a updated time on entries, but we need
                 # it for the date header.  Add a feed_updated_parsed value here.
-                fup = feed.feed.get('updated_parsed')
+                fup = feed_updated_parsed
                 if not fup:
-                    fup = feed.get('modified')
+                    fup = config.get('modified')
                     if not fup:
-                        fup = time.gmtime(now)
+                        fup = tuple(time.gmtime(now))
                     
                 entry['feed_updated_parsed'] = fup
-    
+
                 logger.info("%s article %s@%s (%s)"
                             % (action, id, g.name, num))
                 g.save_article(num, entry)
