@@ -44,7 +44,8 @@ def stable_repr(val):
     elif t == types.TupleType:
         return '(' + ', '.join(map(stable_repr, val)) + ')'
     elif t == types.DictType:
-        return '{' + ', '.join(sorted([repr(x) + ': ' + repr(y) for (x,y) in val.iteritems()])) + '}'
+        return '{' + ', '.join(sorted([stable_repr(x) + ': ' + stable_repr(y)
+                                       for (x,y) in val.iteritems()])) + '}'
     else:
         return repr(val)
 
