@@ -11,7 +11,7 @@
 # Otherwise, polls the feeds specfiied by the group names given as
 # arguments.
 
-import sys, time, md5, types, os, socket, traceback
+import sys, time, hashlib, types, os, socket, traceback
 import feedparser
 
 import settings, lockfile, group
@@ -22,7 +22,7 @@ socket.setdefaulttimeout(20)
 logger = settings.get_logger('pnntprss.update')
 
 def md5hex(s):
-    return md5.new(s).hexdigest()
+    return hashlib.md5(s).hexdigest()
 
 def restrict(d, keys):
     res = {}
