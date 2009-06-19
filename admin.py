@@ -104,8 +104,8 @@ if opts.uri:
         error("There should be exactly one group name")
 
     feed = find_feed(opts.uri)
-    config['href'] = feed['href']
     if feed:
+        config['href'] = feed['href']
         if opts.add_group:
             g = group.NewGroup(args[0], config)
             failed = True
