@@ -223,11 +223,17 @@ def groups():
             if not d.startswith(NewGroup.prefix)
             and os.path.isdir(group_path(d))]
 
+def decode_implicit_utf8(s):
+    if type(s) is not unicode:
+        s = s.decode('utf-8')
+
+    return s
+
 def encode_email_header(name, email="unknown@unknown"):
     """Produce a properly encoded string with the given name and email
     address for use in an article header."""
-    return '%s <%s>' % (message.encode_header_word(name),
-                        message.encode_header_word(email))
+    return '%s <%s>' % tuple(message.encode_header_word(decode_implicit_utf8(s))
+                             for s in [name, email])
 
 def to_html(detail, para=False):
     """Convert a detail-dict produced by the UFP into HTML."""
@@ -318,7 +324,7 @@ class Article:
                 elif 'name' in ad:
                     return encode_email_header(ad['name'])
                 elif 'email' in ad:
-                    return ad['email']
+                    return message.encode_header_word(ad['email'])
             elif 'author' in d:
                 return encode_email_header(d['author'])
 
