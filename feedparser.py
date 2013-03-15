@@ -365,8 +365,11 @@ def _urljoin(base, uri):
     try:
         return urlparse.urljoin(base, uri)
     except:
-        uri = urlparse.urlunparse([urllib.quote(part) for part in urlparse.urlparse(uri)])
-        return urlparse.urljoin(base, uri)
+        try:
+            uri = urlparse.urlunparse([urllib.quote(part) for part in urlparse.urlparse(uri)])
+            return urlparse.urljoin(base, uri)
+        except:
+            return uri
 
 class _FeedParserMixin:
     namespaces = {'': '',
