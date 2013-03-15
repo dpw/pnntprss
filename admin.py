@@ -67,6 +67,7 @@ def find_feed(href, guess=True):
 
     # try to parse as a feed
     feed = None
+    err = None
     try:
         feed = feedparser.parse(urllib.addinfourl(cStringIO.StringIO(content),
                                                   headers, href))
@@ -74,7 +75,7 @@ def find_feed(href, guess=True):
             # doesn't look like a real feed
             feed = None
     except:
-        pass
+        err = sys.exc_info()
 
     if feed is None and guess:
         # try feed autodiscovery
@@ -83,10 +84,14 @@ def find_feed(href, guess=True):
             parser.feed(content)
         except:
             pass
+            #err = sys.exc_info()
 
         if parser.href:
             return find_feed(urlparse.urljoin(href, parser.href), guess=False)
-    
+
+    if feed is None and err:
+        raise err[0], err[1], err[2]
+
     return feed
 
 parser = optparse.OptionParser()
