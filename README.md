@@ -20,7 +20,7 @@ of disk space (I only expire high-volume feeds).
 
 1. Clone the pnntprss git repo somewhere.
 
-2. Sreate a directory `~/.pnntp/groups`.
+2. Create a directory `~/.pnntprss/groups`.
 
 3. Start the NNTP server in the background (assuming that you cloned
    the pnntprss repo into your `~/work` directory):
