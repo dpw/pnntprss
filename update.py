@@ -21,9 +21,6 @@ socket.setdefaulttimeout(20)
 
 logger = settings.get_logger('pnntprss.update')
 
-def md5hex(s):
-    return hashlib.md5(s).hexdigest()
-
 def restrict(d, keys):
     res = {}
     for k in keys:
@@ -122,14 +119,12 @@ def update_group_from_feed(g, feed):
                 
                 # some RSS feeds have ids, but they are empty!
                 id = entry.get('id')
-                if id:
-                    id = md5hex(id)
-                else:
-                    stable_repr = ', '.join(sorted([repr(x) + ': ' + repr(y) for (x,y) in entry.iteritems()]))
-                    id = md5hex(stable_repr)
+                if not id:
+                    id = ', '.join(sorted([repr(x) + ': ' + repr(y) for (x,y) in entry.iteritems()]))
 
+                # Normalize the id
+                id = hashlib.md5(id.encode('utf-8')).hexdigest()
                 entry['message_id'] = id
-            
                 num = index.get(id)
                 action = "New"
                 if num is None:
