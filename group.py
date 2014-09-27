@@ -41,7 +41,7 @@ class NoSuchGroupError(Exception):
     pass
 
 class GroupAlreadyExistsError(Exception):
-    """An Exception indicating the a group with the specified name already exists"""
+    """An Exception indicating that a group with the specified name already exists"""
     pass
 
 def group_path(group_name):
@@ -57,7 +57,7 @@ class Group:
             path = group_path(name)
 
         if not os.path.isdir(path):
-            raise NoSuchGroupError, name
+            raise NoSuchGroupError(name)
 
         self.name = name
         self.path = path
@@ -198,7 +198,7 @@ class NewGroup(Group):
             lock.lock()
             path = group_path(self.name)
             if os.path.exists(path):
-                raise GroupAlreadyExistsError, name
+                raise GroupAlreadyExistsError(name)
     
             os.rename(self.path, path)
             self.path = path

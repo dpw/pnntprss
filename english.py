@@ -61,7 +61,7 @@ def parse_interval(s):
     
     words = re.split('\W+', s)
     if not words or len(words) % 2 != 0:
-        raise 'Oops'
+        raise ValueError("number of words not even")
     
     def unit_multiplier(n):
         n = singular.get(n, n)

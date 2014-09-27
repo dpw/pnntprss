@@ -9,6 +9,10 @@ logger = settings.get_logger('pnntprss.lockfile')
 # we use tempnam safely.
 warnings.filterwarnings('ignore', 'tempnam', RuntimeWarning, 'lockfile')
 
+class LockFileStateError(Exception):
+    """An Exception indicating that the lock was not in the appropriate state"""
+    pass
+
 class LockFile:
     """An object representing a Unix lockfile."""
     
@@ -18,7 +22,7 @@ class LockFile:
         self.expiry_time = expiry_time
         (self.dir, self.prefix) = os.path.split(path)
         if not os.path.isdir(self.dir):
-            raise "invalid directory for lock file: %s" % path
+            raise ValueError("invalid directory for lock file: %s" % path)
 
         if self.prefix[0] != '.':
             self.prefix = '.' + self.prefix
@@ -27,7 +31,7 @@ class LockFile:
         """Try to acquire the lock."""
         
         if self.locked:
-            raise "already holding lock"
+            raise LockFileStateError("already holding lock file: %s" % self.path)
 
         if os.path.exists(self.path):
             try:
@@ -68,7 +72,7 @@ class LockFile:
         """Touch the lock file, to avoid it becoming stale during an
         extended operation."""
         if not self.locked:
-            raise "not locked"
+            raise LockFileStateError("not holding lock file: %s" % self.path)
 
         st = os.stat(self.locked)
         if st.st_nlink == 1:
@@ -81,7 +85,7 @@ class LockFile:
     def unlock(self):
         """Release the lock."""
         if not self.locked:
-            raise "not locked"
+            raise LockFileStateError("not holding lock file: %s" % self.path)
 
         try:
             st = os.stat(self.locked)
