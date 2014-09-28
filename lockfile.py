@@ -21,13 +21,10 @@ class LockFile:
         self.path = path
         self.expiry_time = expiry_time
         (self.dir, self.prefix) = os.path.split(path)
-        if not os.path.isdir(self.dir):
-            raise ValueError("invalid directory for lock file: %s" % path)
-
         if self.prefix[0] != '.':
             self.prefix = '.' + self.prefix
 
-    def trylock(self):
+    def trylock(self, directory_must_exist=False):
         """Try to acquire the lock."""
         
         if self.locked:
@@ -47,8 +44,17 @@ class LockFile:
             if not os.path.exists(tmpfile):
                 break
 
-        f = file(tmpfile, "w")
-        f.close()
+        try:
+            f = file(tmpfile, "w")
+            f.close()
+        except IOError as e:
+            if e.errno != errno.ENOENT:
+                raise
+
+            if directory_must_exist:
+                raise ValueError("missing directory for lock file: %s" % path)
+
+            return False
 
         try:
             os.link(tmpfile, self.path)
@@ -59,11 +65,19 @@ class LockFile:
         except:
             pass
 
-        os.unlink(tmpfile)
+        # The directory containing the lock file might be deleted by
+        # another process (which must hold the lock) while we are
+        # attempting to lock.  In that case, we will fail to delete
+        # our temp file, but that's ok.
+        try:
+            os.unlink(tmpfile)
+        except:
+            pass
+
         return False
 
     def lock(self):
-        while not self.trylock():
+        while not self.trylock(True):
             time.sleep(5)
 
     def touch(self):

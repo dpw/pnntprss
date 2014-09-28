@@ -179,14 +179,38 @@ class Group:
         self.config['next_article_number'] = num + 1
         return num
 
+    def delete(self):
+        # First lock the group, so we know no other processes are
+        # accessing it except to lock.
+        self.lockfile.lock()
+
+        # Now rename the group directory, because deletion is not
+        # atomic but renaming is.
+        path = os.tempnam(settings.groups_dir, ".deleting.")
+        try:
+            os.rename(self.path, path)
+        except:
+            lock.unlock()
+            raise
+
+        # Now delete
+        remove_r(path)
+
+def remove_r(d):
+    for f in os.listdir(d):
+        f = os.path.join(d, f)
+        if os.path.isdir(f):
+            remove_r(f)
+        else:
+            os.remove(f)
+    os.rmdir(d)
+
 class NewGroup(Group):
     """A NNTP group in the process of creation."""
 
-    prefix = ".new."
-
     def __init__(self, name, config):
         """Create a new group with the given name and config"""
-        path = os.tempnam(settings.groups_dir, self.prefix)
+        path = os.tempnam(settings.groups_dir, ".new.")
         os.mkdir(path)
         Group.__init__(self, name, path, config)
         self.save_config()
@@ -204,23 +228,11 @@ class NewGroup(Group):
             self.path = path
         finally:
             lock.unlock()
-    
-    def delete(self):
-        remove_r(self.path)
-        
-def remove_r(d):
-    for f in os.listdir(d):
-        f = os.path.join(d, f)
-        if os.path.isdir(f):
-            remove_r(f)
-        else:
-            os.remove(f)
-    os.rmdir(d)
 
 def groups():
     """Return a sequence of all available groups."""
     return [Group(d) for d in os.listdir(settings.groups_dir)
-            if not d.startswith(NewGroup.prefix)
+            if not d.startswith(".")
             and os.path.isdir(group_path(d))]
 
 def decode_implicit_utf8(s):

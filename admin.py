@@ -96,6 +96,7 @@ def find_feed(href, guess=True):
 
 parser = optparse.OptionParser()
 parser.add_option('-a', '--add-group', action='store_true')
+parser.add_option('-d', '--delete-group', action='store_true')
 parser.add_option('-u', '--uri')
 parser.add_option('-l', '--article-lifetime')
 (opts, args) = parser.parse_args()
@@ -123,18 +124,31 @@ if opts.uri:
                     g.delete()
         else:
             g = group.Group(args[0])
-            g.config.update(config)
-            update.update_group_from_feed(g, feed)
+            g.lockfile.lock()
+            try:
+                g.config.update(config)
+                update.update_group_from_feed(g, feed)
+            finally:
+                g.lockfile.unlock()
     else:
         error("Could not find a valid feed at %s" % opts.uri)
 elif opts.add_group:
     error("Feed URI not specified")
+elif opts.delete_group:
+    # delete groups
+    for arg in args:
+        g = group.Group(arg)
+        g.delete()
 elif config:
     # update groups
     for arg in args:
         g = group.Group(arg)
-        g.config.update(config)
-        g.save_config()
+        g.lockfile.lock()
+        try:
+            g.config.update(config)
+            g.save_config()
+        finally:
+            g.lockfile.unlock()
 elif len(args) == 0:
     # with no args, list all groups
     for g in group.groups():
