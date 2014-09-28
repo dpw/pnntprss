@@ -1,6 +1,6 @@
 # Unix lockfiles
 
-import os, os.path, time, warnings
+import os, os.path, time, warnings, errno
 
 import settings
 
@@ -33,18 +33,15 @@ class LockFile:
         if self.locked:
             raise LockFileStateError("already holding lock file: %s" % self.path)
 
-        if os.path.exists(self.path):
-            try:
-                st = os.stat(self.path)
-                if time.time() - st.st_mtime < self.expiry_time:
-                    # lock exists, and isn't stale, so we don't acquire it
-                    return False
+        try:
+            st = os.stat(self.path)
+            if time.time() - st.st_mtime < self.expiry_time:
+                # lock exists, and isn't stale, so we don't acquire it
+                return False
+        except OSError as e:
+            if e.errno != errno.ENOENT:
+                raise
 
-                logger.info("removing stale lock file %s" % self.path)
-                os.remove(self.path)
-            except:
-                pass
-        
         while True:
             tmpfile = os.tempnam(self.dir, self.prefix)
             if not os.path.exists(tmpfile):
@@ -55,14 +52,15 @@ class LockFile:
 
         try:
             os.link(tmpfile, self.path)
+            st = os.stat(tmpfile)
+            if st.st_nlink > 1:
+                self.locked = tmpfile
+                return True
         except:
             pass
-            
-        st = os.stat(tmpfile)
-        if st.st_nlink > 1:
-            self.locked = tmpfile
-        
-        return self.locked is not False
+
+        os.unlink(tmpfile)
+        return False
 
     def lock(self):
         while not self.trylock():
