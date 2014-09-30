@@ -11,7 +11,7 @@
 # Otherwise, polls the feeds specfiied by the group names given as
 # arguments.
 
-import sys, time, hashlib, types, os, socket, traceback
+import sys, time, hashlib, os, socket, traceback
 import feedparser
 
 import settings, lockfile, group
@@ -35,15 +35,38 @@ entry_struct_time_keys = [x+'_parsed' for x in 'published updated created expire
 
 def stable_repr(val):
     t = type(val)
-    if t == types.ListType:
+    if t == list:
         return '[' + ', '.join(map(stable_repr, val)) + ']'
-    elif t == types.TupleType:
+    elif t == tuple:
         return '(' + ', '.join(map(stable_repr, val)) + ')'
-    elif t == types.DictType:
+    elif t == dict:
         return '{' + ', '.join(sorted([stable_repr(x) + ': ' + stable_repr(y)
                                        for (x,y) in val.iteritems()])) + '}'
     else:
         return repr(val)
+
+def transform(v, f):
+    v = f(v)
+    if isinstance(v, dict):
+        for k in v:
+            v[k] = transform(v[k], f)
+    elif isinstance(v, list):
+        for i in range(0, len(v)):
+            v[i] = transform(v[i], f)
+    elif isinstance(v, tuple):
+        return tuple(transform(x, f) for x in v)
+
+    return v
+
+def fix_unicode_keys(d):
+    if isinstance(d, dict):
+        for k in ('type', 'rel'):
+            if k in d:
+                v = d[k]
+                if type(v) == unicode:
+                    d[k] = v.encode('utf-8')
+
+    return d
 
 def update_if_ready(g):
     if not g.ready_to_check(time.time()):
@@ -84,9 +107,6 @@ def update_group_from_feed(g, feed):
         config["lastpolled"] = now
 
         state = restrict(feed, state_keys)
-        if 'modified' in state:
-            # coerce struct_time to a tuple
-            state['modified'] = tuple(state['modified'])
 
         config.update(state)
         config.update(restrict(feed['feed'], feed_info_keys))
@@ -95,10 +115,9 @@ def update_group_from_feed(g, feed):
             # permanent redirect.  update config
             config['href'] = feed.href
 
-        feed_updated_parsed = feed.feed.get('updated_parsed')
-        if feed_updated_parsed:
-            # coerce struct_time to a tuple
-            feed_updated_parsed = tuple(feed_updated_parsed)
+        # coerce struct_time to a tuple
+        feed_updated_parsed = tuple(feed.get('updated_parsed')
+                                    or time.gmtime(now))
 
         if 'entries' in feed and len(feed['entries']):
             index = g.load_eval("index", {})
@@ -111,7 +130,13 @@ def update_group_from_feed(g, feed):
             for entry in reversed(feed.entries):
                 # convert entry to true dict
                 entry = dict(entry.iteritems())
-            
+
+                # feedparser version 5.x produces unicode string for
+                # some entry values that were previously byte strings.
+                # Convert them back so that we generate consistent ids
+                # below.
+                entry = transform(entry, fix_unicode_keys)
+
                 # coerce struct_time fields to tuples
                 for k in entry_struct_time_keys:
                     if k in entry:
@@ -127,23 +152,23 @@ def update_group_from_feed(g, feed):
                 entry['message_id'] = id
                 num = index.get(id)
                 action = "New"
+
+                if num is not None:
+                    a = g.article(num)
+                    if a is not None:
+                        if a.same_entry(entry):
+                            continue
+
+                        action = "Updated"
+                    else:
+                        num = None
+
                 if num is None:
                     num = index[id] = g.next_article_number()
-                else:
-                    if g.article(num).same_entry(entry):
-                        continue
-                    else:
-                        action = "Updated"
 
                 # some feeds lack a updated time on entries, but we need
                 # it for the date header.  Add a feed_updated_parsed value here.
-                fup = feed_updated_parsed
-                if not fup:
-                    fup = config.get('modified')
-                    if not fup:
-                        fup = tuple(time.gmtime(now))
-                    
-                entry['feed_updated_parsed'] = fup
+                entry['feed_updated_parsed'] = feed_updated_parsed
 
                 logger.info("%s article %s@%s (%s)"
                             % (action, id, g.name, num))
