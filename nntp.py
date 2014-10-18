@@ -2,7 +2,7 @@
 #
 # NNTP protocol handling
 
-import sys, os, re, codecs
+import sys, os, re, codecs, errno
 
 import settings, group
 
@@ -69,20 +69,26 @@ class NNTPServer:
         """Process NNTP commands comming from the client, until it
         terminates the connection."""
         self.writeline('201 server ready - no posting allowed')
-        
-        for l in self.readlines():
-            tokens = separator_re.split(l)
-            if not tokens:
-                self.writeline('501 command syntax error')
-    
-            m = getattr(self, 'do_' + tokens[0].upper(), None)
-            if m:
-                m(tokens[1:])
-            else:
-                self.writeline('500 command not recognized')
 
-            if self.finished:
-                break
+        try:
+            for l in self.readlines():
+                tokens = separator_re.split(l)
+                if not tokens:
+                    self.writeline('501 command syntax error')
+
+                m = getattr(self, 'do_' + tokens[0].upper(), None)
+                if m:
+                    m(tokens[1:])
+                else:
+                    self.writeline('500 command not recognized')
+
+                if self.finished:
+                    break
+        except IOError as e:
+            # Swallow the exception when the connection is dropped
+            # with outstanding data:
+            if e.errno != errno.ECONNRESET:
+                raise
 
     # each do_* method handles the corresponding NNTP command.
 
