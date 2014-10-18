@@ -349,8 +349,10 @@ class Article:
         """Construct a date header value for the article."""
         t = self.entry.get('updated_parsed')
         if not t:
+            t = self.entry.get('published_parsed')
+        if not t:
             t = self.entry.get('feed_updated_parsed')
-            
+
         return time.strftime("%d %b %Y %H:%M:%S %z", t)
 
     def make_message(self):
