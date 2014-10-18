@@ -9,11 +9,11 @@ to 3.x yet).  It uses Mark Pilgrim's wonderful
 [feedparser](http://code.google.com/p/feedparser/) which takes care of
 much of the hard work.
 
-pnntprss has a purposefully simple design.  It has no depedencies.
-All feed ata is stored in the filesystem, one directory per feed, one
+pnntprss has a purposefully simple design.  It has no dependencies.
+All feed data is stored in the filesystem, one directory per feed, one
 file per feed item.  This works surprisingly well, even with hundreds
 or thousands of items in a feed.  I have been running pnntprss
-continuously for about 7 years; I have 60k feed items occupying 400MB
+continuously for about many years; I have 60k feed items occupying 400MB
 of disk space (I only expire high-volume feeds).
 
 ## Using pnntprss
@@ -34,7 +34,7 @@ of disk space (I only expire high-volume feeds).
 
    This will run `update.py` (which gets feeds) every minute and
    `expire.py` (which expires feed items) every 6 hours. (Note that
-   `update.py` won't actuall request every feed every minute if you do
+   `update.py` won't actually request every feed every minute if you do
    this; it will only request feeds that haven't been checked for a
    configurable interval, which defaults to 30 minutes.)
 
