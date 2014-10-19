@@ -78,7 +78,7 @@ def update_if_ready(g):
         return
 
     try:
-        logger.info("Checking " + g.name)
+        logger.debug("Checking " + g.name)
 
         # group info could have changed by the time we locked
         g.reload_config()

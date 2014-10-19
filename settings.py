@@ -24,7 +24,7 @@ feed_poll_concurrency = 4
 # Logging settings
 import logging
 
-logging.basicConfig(level=logging.DEBUG,
+logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s %(name)s %(message)s',
                     datefmt='%Y-%m-%d %H:%M:%S',
                     filename=os.path.join(base_dir, "log"))
