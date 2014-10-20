@@ -13,7 +13,7 @@ pnntprss has a purposefully simple design.  It has no dependencies.
 All feed data is stored in the filesystem, one directory per feed, one
 file per feed item.  This works surprisingly well, even with hundreds
 or thousands of items in a feed.  I have been running pnntprss
-continuously for about many years; I have 60k feed items occupying 400MB
+continuously for many years; I have 60k feed items occupying 400MB
 of disk space (I only expire high-volume feeds).
 
 ## Using pnntprss
