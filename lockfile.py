@@ -35,6 +35,9 @@ class LockFile:
             if time.time() - st.st_mtime < self.expiry_time:
                 # lock exists, and isn't stale, so we don't acquire it
                 return False
+
+            logger.info("removing stale lock file %s" % self.path)
+            os.remove(self.path)
         except OSError as e:
             if e.errno != errno.ENOENT:
                 raise
