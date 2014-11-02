@@ -63,6 +63,7 @@ def find_feed(href, guess=True):
     usock = urllib2.urlopen(req)
     content = usock.read()
     headers = usock.info()
+    charset = usock.headers.getparam("charset")
     usock.close()
 
     # try to parse as a feed
@@ -79,8 +80,12 @@ def find_feed(href, guess=True):
 
     if feed is None and guess:
         # try feed autodiscovery
-        parser = LinkParser()
         try:
+            parser = LinkParser()
+
+            if charset:
+                content = content.decode(charset)
+
             parser.feed(content)
         except:
             pass
