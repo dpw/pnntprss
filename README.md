@@ -40,6 +40,6 @@ of disk space (I only expire high-volume feeds).
 
 5. Use `admin.py` to add some feeds:
 
-        `~/work/pnntprss/admin.py -a -u http://david.wragg.org/blog/ org.wragg.david
+        ~/work/pnntprss/admin.py -a -u http://david.wragg.org/blog/ org.wragg.david
 
 6. Point your NNTP client to `localhost:4321`
