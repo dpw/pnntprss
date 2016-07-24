@@ -11,7 +11,7 @@
 # Otherwise, polls the feeds specfiied by the group names given as
 # arguments.
 
-import sys, time, hashlib, os, socket, traceback
+import sys, time, hashlib, os, socket, traceback, resource
 import feedparser
 
 import settings, lockfile, group
@@ -68,6 +68,10 @@ def fix_unicode_keys(d):
 
     return d
 
+def cputime():
+    ru = resource.getrusage(resource.RUSAGE_SELF)
+    return ru.ru_utime + ru.ru_stime
+
 def update_if_ready(g):
     if not g.ready_to_check(time.time()):
         return
@@ -90,6 +94,7 @@ def update_if_ready(g):
         g.lockfile.unlock()
 
 def update_group_from_feed(g, feed):
+    startt = cputime()
     try:
         # for debugging
         g.save("feed", repr(feed))
@@ -179,6 +184,9 @@ def update_group_from_feed(g, feed):
     finally:
         g.save_config()
 
+    dt = cputime() - startt
+    if dt > 1:
+        logger.info("Updating from %s took unusually long (%s CPU seconds)" % (g.name, dt))
 
 def run_tasks(tasks, concurrency):
     pids = {}
