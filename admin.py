@@ -104,11 +104,15 @@ parser.add_option('-a', '--add-group', action='store_true')
 parser.add_option('-d', '--delete-group', action='store_true')
 parser.add_option('-u', '--uri')
 parser.add_option('-l', '--article-lifetime')
+parser.add_option('-i', '--poll-interval')
 (opts, args) = parser.parse_args()
 
 config = {}
 if opts.article_lifetime:
     config['article_lifetime'] = english.parse_interval(opts.article_lifetime)
+
+if opts.update_interval:
+    config['interval'] = english.parse_interval(opts.update_interval)
 
 if opts.uri:
     if len(args) != 1:
