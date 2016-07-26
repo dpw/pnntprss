@@ -87,14 +87,18 @@ def update_if_ready(g):
         # group info could have changed by the time we locked
         g.reload_config()
 
-        update_group_from_feed(g, feedparser.parse(g.config['href'],
-                                              agent=settings.user_agent,
-                                              **restrict(g.config, state_keys)))
+        startt = cputime()
+        feed = feedparser.parse(g.config['href'],
+                                agent=settings.user_agent,
+                                **restrict(g.config, state_keys))
+        update_group_from_feed(g, feed)
+        dt = cputime() - startt
+        if dt > 1:
+            logger.info("Updating from %s took unusually long (%s CPU seconds)" % (g.name, dt))
     finally:
         g.lockfile.unlock()
 
 def update_group_from_feed(g, feed):
-    startt = cputime()
     try:
         # for debugging
         g.save("feed", repr(feed))
@@ -183,10 +187,6 @@ def update_group_from_feed(g, feed):
             g.save("index", repr(index))
     finally:
         g.save_config()
-
-    dt = cputime() - startt
-    if dt > 1:
-        logger.info("Updating from %s took unusually long (%s CPU seconds)" % (g.name, dt))
 
 def run_tasks(tasks, concurrency):
     pids = {}
