@@ -88,10 +88,20 @@ def update_if_ready(g):
         g.reload_config()
 
         startt = cputime()
-        feed = feedparser.parse(g.config['href'],
-                                agent=settings.user_agent,
-                                **restrict(g.config, state_keys))
-        update_group_from_feed(g, feed)
+        try:
+            update_group_from_feed(g,
+                            feedparser.parse(g.config['href'],
+                                             agent=settings.user_agent,
+                                             **restrict(g.config, state_keys)))
+            for k in ("last_failed_poll", "failed_polls"):
+                if k in g.config:
+                    del g.config[k]
+        except:
+            g.config["last_failed_poll"] = time.time()
+            g.config["failed_polls"] = g.config.get("failed_polls", 0) + 1
+            g.save_config()
+            raise
+
         dt = cputime() - startt
         if dt > 1:
             logger.info("Updating from %s took unusually long (%s CPU seconds)" % (g.name, dt))

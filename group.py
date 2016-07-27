@@ -113,7 +113,17 @@ class Group:
 
     def ready_to_check(self, t):
         """Do we need to poll the group's feed at time t?"""
-        return t - self.config.get("lastpolled", 0) >= self.config.get("interval", settings.feed_poll_interval)
+        polled_at = self.config.get("lastpolled", 0)
+        failed_at = self.config.get("last_failed_poll", 0)
+        interval = self.config.get("interval", settings.feed_poll_interval)
+
+        if failed_at > polled_at:
+            next_poll = failed_at + min(interval,
+                                    60 << self.config.get("failed_polls", 0))
+        else:
+            next_poll = polled_at + interval
+
+        return t >= next_poll
 
     def article_range(self):
         """Determine a (lowest article number, highest article number,
