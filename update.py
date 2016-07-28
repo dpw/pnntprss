@@ -120,16 +120,19 @@ def update_group_from_feed(g, feed):
             else:
                 # no feed, give up
                 raise feed.bozo_exception
-    
+
         now = time.time()
         config = g.config
         config["lastpolled"] = now
 
-        state = restrict(feed, state_keys)
+        for k in state_keys:
+            if k in feed:
+                config[k] = feed[k]
+            elif k in config:
+                del config[k]
 
-        config.update(state)
         config.update(restrict(feed['feed'], feed_info_keys))
-        
+
         if feed.status == 301:
             # permanent redirect.  update config
             config['href'] = feed.href
@@ -140,7 +143,7 @@ def update_group_from_feed(g, feed):
 
         if 'entries' in feed and len(feed['entries']):
             index = g.load_eval("index", {})
-    
+
             # XXX might need to generate index if it didn't exist
             g.saferemove("index")
 
