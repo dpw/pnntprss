@@ -11,7 +11,8 @@
 # Otherwise, polls the feeds specfiied by the group names given as
 # arguments.
 
-import sys, time, hashlib, os, socket, traceback, resource
+import sys, time, hashlib, os, socket, traceback, resource, urllib2, urllib
+from cStringIO import StringIO
 import feedparser
 
 import settings, lockfile, group
@@ -72,10 +73,37 @@ def cputime():
     ru = resource.getrusage(resource.RUSAGE_SELF)
     return ru.ru_utime + ru.ru_stime
 
-def update_if_ready(g):
-    if not g.ready_to_check(time.time()):
-        return
+class UnchangedHandler(urllib2.BaseHandler):
+    def __init__(self, expected_md5):
+        self.expected_md5 = expected_md5
+        self.actual_md5 = None
 
+    def http_response(self, req, resp):
+        if resp.getcode() != 200:
+            return resp
+
+        body = resp.read()
+        self.actual_md5 = hashlib.md5(body).hexdigest()
+
+        code = resp.getcode()
+        msg = ""
+
+        if hasattr(resp, "msg"):
+            msg = resp.msg
+
+        if self.actual_md5 == self.expected_md5:
+            logger.debug("%s matched existing md5sum" % (g.name,))
+            code = 304
+            msg = "Not modified"
+
+        resp = urllib.addinfourl(StringIO(body), resp.info(), resp.geturl(),
+                                 code)
+        resp.msg = msg
+        return resp
+
+    https_response = http_response
+
+def update(g):
     if not g.lockfile.trylock():
         # we are already updating, expiring, or otherwise messing with
         # this group.  No problem, we'll try again next time round.
@@ -89,13 +117,21 @@ def update_if_ready(g):
 
         startt = cputime()
         try:
+            handler = UnchangedHandler(g.config.get("md5sum", ""))
             update_group_from_feed(g,
                             feedparser.parse(g.config['href'],
                                              agent=settings.user_agent,
+                                             handlers=[handler],
                                              **restrict(g.config, state_keys)))
+
+            if handler.actual_md5:
+                g.config["md5sum"] = handler.actual_md5
+
             for k in ("last_failed_poll", "failed_polls"):
                 if k in g.config:
                     del g.config[k]
+
+            g.save_config()
         except:
             g.config["last_failed_poll"] = time.time()
             g.config["failed_polls"] = g.config.get("failed_polls", 0) + 1
@@ -109,97 +145,94 @@ def update_if_ready(g):
         g.lockfile.unlock()
 
 def update_group_from_feed(g, feed):
-    try:
-        # for debugging
-        g.save("feed", repr(feed))
+    # for debugging
+    g.save("feed", repr(feed))
 
-        if feed.bozo:
-            if feed.get('status'):
-                # we have a feed, but it's bozotic
-                logger.warning("%s: bozo: %s" % (g.name, feed.bozo_exception))
-            else:
-                # no feed, give up
-                raise feed.bozo_exception
+    if feed.bozo:
+        if feed.get('status'):
+            # we have a feed, but it's bozotic
+            logger.warning("%s: bozo: %s" % (g.name, feed.bozo_exception))
+        else:
+            # no feed, give up
+            raise feed.bozo_exception
 
-        now = time.time()
-        config = g.config
-        config["lastpolled"] = now
+    now = time.time()
+    config = g.config
+    config["lastpolled"] = now
 
-        for k in state_keys:
-            if k in feed:
-                config[k] = feed[k]
-            elif k in config:
-                del config[k]
+    for k in state_keys:
+        if k in feed:
+            config[k] = feed[k]
+        elif k in config:
+            del config[k]
 
-        config.update(restrict(feed['feed'], feed_info_keys))
+    config.update(restrict(feed['feed'], feed_info_keys))
 
-        if feed.status == 301:
-            # permanent redirect.  update config
-            config['href'] = feed.href
+    if feed.status == 301:
+        # permanent redirect.  update config
+        config['href'] = feed.href
 
-        # coerce struct_time to a tuple
-        feed_updated_parsed = tuple(feed.get('updated_parsed')
-                                    or time.gmtime(now))
+    # coerce struct_time to a tuple
+    feed_updated_parsed = tuple(feed.get('updated_parsed')
+                                or time.gmtime(now))
 
-        if 'entries' in feed and len(feed['entries']):
-            index = g.load_eval("index", {})
+    if 'entries' in feed and len(feed['entries']):
+        index = g.load_eval("index", {})
 
-            # XXX might need to generate index if it didn't exist
-            g.saferemove("index")
+        # XXX might need to generate index if it didn't exist
+        g.saferemove("index")
 
-            # entries are in reverse chronological order.  But we want
-            # chronological order, to match article numbers
-            for entry in reversed(feed.entries):
-                # convert entry to true dict
-                entry = dict(entry.iteritems())
+        # entries are in reverse chronological order.  But we want
+        # chronological order, to match article numbers
+        for entry in reversed(feed.entries):
+            # convert entry to true dict
+            entry = dict(entry.iteritems())
 
-                # feedparser version 5.x produces unicode string for
-                # some entry values that were previously byte strings.
-                # Convert them back so that we generate consistent ids
-                # below.
-                entry = transform(entry, fix_unicode_keys)
+            # feedparser version 5.x produces unicode string for
+            # some entry values that were previously byte strings.
+            # Convert them back so that we generate consistent ids
+            # below.
+            entry = transform(entry, fix_unicode_keys)
 
-                # coerce struct_time fields to tuples
-                for k in entry_struct_time_keys:
-                    if k in entry:
-                        entry[k] = tuple(entry[k])
-                
-                # some RSS feeds have ids, but they are empty!
-                id = entry.get('id')
-                if not id:
-                    id = ', '.join(sorted([repr(x) + ': ' + repr(y) for (x,y) in entry.iteritems()]))
+            # coerce struct_time fields to tuples
+            for k in entry_struct_time_keys:
+                if k in entry:
+                    entry[k] = tuple(entry[k])
+            
+            # some RSS feeds have ids, but they are empty!
+            id = entry.get('id')
+            if not id:
+                id = ', '.join(sorted([repr(x) + ': ' + repr(y) for (x,y) in entry.iteritems()]))
 
-                # Normalize the id
-                id = hashlib.md5(id.encode('utf-8')).hexdigest()
-                entry['message_id'] = id
-                num = index.get(id)
-                action = "New"
+            # Normalize the id
+            id = hashlib.md5(id.encode('utf-8')).hexdigest()
+            entry['message_id'] = id
+            num = index.get(id)
+            action = "New"
 
-                if num is not None:
-                    a = g.article(num)
-                    if a is not None:
-                        if a.same_entry(entry):
-                            continue
+            if num is not None:
+                a = g.article(num)
+                if a is not None:
+                    if a.same_entry(entry):
+                        continue
 
-                        action = "Updated"
-                    else:
-                        num = None
+                    action = "Updated"
+                else:
+                    num = None
 
-                if num is None:
-                    num = index[id] = g.next_article_number()
+            if num is None:
+                num = index[id] = g.next_article_number()
 
-                # some feeds lack a updated time on entries, but we need
-                # it for the date header.  Add a feed_updated_parsed value here.
-                entry['feed_updated_parsed'] = feed_updated_parsed
+            # some feeds lack a updated time on entries, but we need
+            # it for the date header.  Add a feed_updated_parsed value here.
+            entry['feed_updated_parsed'] = feed_updated_parsed
 
-                logger.info("%s article %s@%s (%s)"
-                            % (action, id, g.name, num))
-                g.save_article(num, entry)
+            logger.info("%s article %s@%s (%s)"
+                        % (action, id, g.name, num))
+            g.save_article(num, entry)
 
-            # XXX need to catch exceptions so we always save next art number
-            g.save("index", repr(index))
-    finally:
-        g.save_config()
+        # XXX need to catch exceptions so we always save next art number
+        g.save("index", repr(index))
 
 def run_tasks(tasks, concurrency):
     pids = {}
@@ -230,7 +263,9 @@ if __name__ == "__main__":
     if len(sys.argv) > 1:
         for arg in sys.argv[1:]:
             try:
-                update_if_ready(group.Group(arg))
+                g = group.Group(arg)
+                if g.ready_to_check(time.time()):
+                    update(g)
             except:
                 logger.warning("%s: %s" % (arg, traceback.format_exc()))
     else:

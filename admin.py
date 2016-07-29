@@ -126,6 +126,7 @@ if opts.uri:
             failed = True
             try:
                 update.update_group_from_feed(g, feed)
+                g.save_config()
                 failed = False
                 g.create()
             finally:
@@ -137,6 +138,7 @@ if opts.uri:
             try:
                 g.config.update(config)
                 update.update_group_from_feed(g, feed)
+                g.save_config()
             finally:
                 g.lockfile.unlock()
     else:
