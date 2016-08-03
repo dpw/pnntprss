@@ -12,6 +12,7 @@
 # arguments.
 
 import sys, time, hashlib, os, socket, traceback, resource, urllib2, urllib
+import logging
 from cStringIO import StringIO
 import feedparser
 
@@ -151,7 +152,8 @@ def update_group_from_feed(g, feed):
     if feed.bozo:
         if feed.get('status'):
             # we have a feed, but it's bozotic
-            logger.warning("%s: bozo: %s" % (g.name, feed.bozo_exception))
+            logger.warning("%s: bozo: %s" % (g.name,
+                                             str(feed.bozo_exception).strip()))
         else:
             # no feed, give up
             raise feed.bozo_exception
@@ -266,8 +268,13 @@ if __name__ == "__main__":
                 g = group.Group(arg)
                 if g.ready_to_check(time.time()):
                     update(g)
-            except:
-                logger.warning("%s: %s" % (arg, traceback.format_exc()))
+            except Exception as e:
+                if logger.isEnabledFor(logging.DEBUG):
+                    msg = traceback.format_exc()
+                else:
+                    msg = str(e)
+
+                logger.warning("%s: %s" % (arg, msg))
     else:
         lock = lockfile.LockFile(os.path.join(settings.groups_dir, "update.lock"))
         if lock.trylock():
