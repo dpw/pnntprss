@@ -111,8 +111,8 @@ config = {}
 if opts.article_lifetime:
     config['article_lifetime'] = english.parse_interval(opts.article_lifetime)
 
-if opts.update_interval:
-    config['interval'] = english.parse_interval(opts.update_interval)
+if opts.poll_interval:
+    config['interval'] = english.parse_interval(opts.poll_interval)
 
 if opts.uri:
     if len(args) != 1:
